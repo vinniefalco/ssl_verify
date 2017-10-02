@@ -1,0 +1,15 @@
+{
+    "key": "ssl_verify",
+    "name": "SSLVerify",
+    "authors": [
+        "Vinnie Falco"
+    ],
+    "description": "Cross platform verification of SSL/TLS server certificates",
+    "category": [
+        "Concurrent",
+        "IO"
+    ],
+    "maintainers": [
+        "Vinnie Falco <vinnie.falco@gmail.com>"
+    ]
+}
