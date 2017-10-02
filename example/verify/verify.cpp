@@ -18,6 +18,27 @@
 using tcp = boost::asio::ip::tcp;
 namespace ssl = boost::asio::ssl;
 
+#include <functional>
+  bool verify_certificate(bool preverified,
+      boost::asio::ssl::verify_context& ctx)
+  {
+    // The verify callback can be used to check whether the certificate that is
+    // being presented is valid for the peer. For example, RFC 2818 describes
+    // the steps involved in doing this for HTTPS. Consult the OpenSSL
+    // documentation for more details. Note that the callback is called once
+    // for each certificate in the certificate chain, starting from the root
+    // certificate authority.
+
+    // In this example we will simply print the certificate's subject name.
+    char subject_name[256];
+    X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
+    X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
+    std::cout << "Verifying " << subject_name << "\n";
+
+    return preverified;
+  }
+
+
 int main(int argc, char** argv)
 {
     try
@@ -38,11 +59,17 @@ int main(int argc, char** argv)
 
         // The SSL context is required, and holds certificates
         ssl::context ctx{ssl::context::sslv23};
-        ctx.set_verify_mode(ssl::verify_peer);
+        //ctx.set_verify_mode(ssl::verify_peer);
 
         // These objects perform our I/O
         tcp::resolver resolver{ios};
         ssl::stream<tcp::socket> stream{ios, ctx};
+
+        // Set certificate verification settings
+        //stream.set_verify_callback(boost::net::ssl_verify_callback{host});
+        stream.set_verify_mode(ssl::verify_peer);
+        stream.set_verify_callback(std::bind(&verify_certificate,
+            std::placeholders::_1, std::placeholders::_2));
 
         // Look up the domain name
         auto const lookup = resolver.resolve({host, "https"});
@@ -51,7 +78,6 @@ int main(int argc, char** argv)
         boost::asio::connect(stream.next_layer(), lookup);
 
         // Perform the SSL handshake
-        stream.set_verify_callback(boost::net::ssl_verify_callback{host});
         stream.handshake(ssl::stream_base::client);
 
         // Gracefully close the stream
